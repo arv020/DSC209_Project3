@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Project 3 – Chart 7 & 5</title>
+
+
+  <link rel="stylesheet" href="main.css" />
+  <style>
+    body { max-width: 1100px; }
+    h1 { margin-top: 0.5rem; }
+    .hscroll { overflow-x: auto; border: 1px solid #eee; border-radius: 10px; padding: 8px; }
+    .card { margin: 24px 0; }
+    .title { font-weight: 600; margin: 0 0 10px; }
+    .tooltip {
+      position: fixed; pointer-events: none; background: #111827; color: #fff;
+      padding: 8px 10px; border-radius: 8px; font-size: 12px;
+      box-shadow: 0 6px 18px rgba(0,0,0,.15); transform: translate(-50%,-120%);
+      opacity: 0; z-index: 10;
+    }
+    svg { width: 100%; height: auto; display: block; }
+    .axis text { font-size: 11px; }
+    .axis path, .axis line { stroke: #9ca3af; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="title">Chart 7) Clinics vs % Traveling </div>
+    <div class="hscroll"><svg id="c7" viewBox="0 0 980 560"></svg></div>
+  </div>
+
+  <div class="card">
+    <div class="title">Chart 5) Abortion Rate by Clinic Availability (Low vs High, median split)</div>
+    <svg id="c5" viewBox="0 0 980 520"></svg>
+  </div>
+
+  <div id="tt" class="tooltip"></div>
+
+
+  <script type="module">
+    import * as d3   from 'https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm';
+    import * as XLSX from 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm';
+
+    const COL = {
+      state: "U.S. State",
+      clinics_2020: "No. of abortion clinics, 2020",
+      pct_travel_2020: "% of residents obtaining abortions who traveled out of state for care, 2020",
+      rate_res_2020: "No. of abortions per 1,000 women aged 15–44, by state of residence, 2020"
+    };
+
+    // numeric cleaner (handles % , commas, em-dash, 'unavailable')
+    const toNum = v => {
+      if (v == null) return undefined;
+      const s = String(v).trim().replace(/,/g,'').replace(/%/g,'').replace(/[—–]/g,'').replace(/†/g,'');
+      if (!s || s.toLowerCase() === 'unavailable') return undefined;
+      const n = +s; return Number.isFinite(n) ? n : undefined;
+    };
+
+    const tt = d3.select('#tt');
+    const showTT = (html, [x,y]) => tt.style('opacity',1).html(html).style('left',x+'px').style('top',y+'px');
+    const hideTT = () => tt.style('opacity',0);
+
+    async function loadData() {
+      const buf = await fetch('GuttmacherInstituteAbortionDataByState.xlsx').then(r => r.arrayBuffer());
+      const wb  = XLSX.read(buf, { type: 'array' });
+      const ws  = wb.Sheets[wb.SheetNames[0]];
+      const raw = XLSX.utils.sheet_to_json(ws, { defval: null });
+      return raw.map(r => ({
+        state: r[COL.state],
+        clinics:       toNum(r[COL.clinics_2020]),
+        pctTravel:     toNum(r[COL.pct_travel_2020]),
+        ratePer1k:     toNum(r[COL.rate_res_2020])
+      })).filter(d => d.state);
+    }
+
+    // ---------------- Chart 7: Clinics vs % Traveling (all states) ----------------
+    function chart7(data) {
+      const svg = d3.select('#c7');
+      const m = { t: 54, r: 60, b: 140, l: 70 };
+      const perState = 28;
+      const states = data.map(d => d.state)
+        .sort((a,b)=> d3.descending((data.find(x=>x.state===a)?.clinics)||0,
+                                    (data.find(x=>x.state===b)?.clinics)||0));
+      const W = Math.max(980, m.l + m.r + states.length * perState);
+      const H = 560, w = W - m.l - m.r, h = H - m.t - m.b;
+
+      svg.attr('viewBox', `0 0 ${W} ${H}`);
+
+      const g = svg.append('g').attr('transform', `translate(${m.l},${m.t})`);
+
+      const x = d3.scaleBand().domain(states).range([0, w]).paddingInner(0.2).paddingOuter(0.02);
+      const xSub = d3.scaleBand().domain(['Clinics','Travel']).range([0, x.bandwidth()]).padding(0.25);
+
+      const maxClin = d3.max(data, d => d.clinics||0) || 1;
+      const maxTrav = d3.max(data, d => d.pctTravel||0) || 1;
+      const yClin = d3.scaleLinear().domain([0, maxClin]).nice().range([h,0]);
+      const yTrav = d3.scaleLinear().domain([0, maxTrav]).nice().range([h,0]);
+
+      g.append('g').attr('class','axis').attr('transform',`translate(0,${h})`)
+        .call(d3.axisBottom(x).tickSizeOuter(0))
+        .selectAll('text').attr('transform','rotate(-60)').attr('text-anchor','end').attr('dx','-0.6em').attr('dy','0.15em');
+
+      g.append('g').attr('class','axis').call(d3.axisLeft(yClin).ticks(6).tickFormat(d3.format(',')));
+      g.append('g').attr('class','axis').attr('transform',`translate(${w},0)`).call(d3.axisRight(yTrav).ticks(6));
+
+      g.append('text').attr('x',-50).attr('y',-20).attr('text-anchor','start').text('Clinics (left axis)');
+      g.append('text').attr('x', w-10).attr('y',-20).attr('text-anchor','end').text('% traveling (right axis)');
+
+      const rows = states.map(s => {
+        const r = data.find(d => d.state===s) || {};
+        return { state:s, clinics:r.clinics, travel:r.pctTravel };
+      });
+
+      const colClin = '#60a5fa', colTrav = '#f472b6';
+
+      g.selectAll('.bar-clin').data(rows.filter(d=>Number.isFinite(d.clinics))).join('rect')
+        .attr('class','bar-clin')
+        .attr('x', d=> x(d.state)+xSub('Clinics'))
+        .attr('y', d=> yClin(d.clinics))
+        .attr('width', xSub.bandwidth())
+        .attr('height', d=> h - yClin(d.clinics))
+        .attr('fill', colClin)
+        .on('mousemove', (ev,d)=> showTT(
+          `<b>${d.state}</b><br>Clinics: ${d3.format(',')(d.clinics)}<br>% traveling: ${Number.isFinite(d.travel)?d3.format('.1f')(d.travel)+'%':'N/A'}`,
+          [ev.clientX, ev.clientY]))
+        .on('mouseleave', hideTT);
+
+      g.selectAll('.bar-trav').data(rows.filter(d=>Number.isFinite(d.travel))).join('rect')
+        .attr('class','bar-trav')
+        .attr('x', d=> x(d.state)+xSub('Travel'))
+        .attr('y', d=> yTrav(d.travel))
+        .attr('width', xSub.bandwidth())
+        .attr('height', d=> h - yTrav(d.travel))
+        .attr('fill', colTrav)
+        .on('mousemove', (ev,d)=> showTT(
+          `<b>${d.state}</b><br>% traveling: ${d3.format('.1f')(d.travel)}%<br>Clinics: ${Number.isFinite(d.clinics)?d3.format(',')(d.clinics):'N/A'}`,
+          [ev.clientX, ev.clientY]))
+        .on('mouseleave', hideTT);
+
+      const legendW = 260;
+      const legend = g.append('g').attr('transform',`translate(${(w-legendW)/2}, -34)`);
+      legend.append('rect').attr('x',-10).attr('y',-12).attr('width',legendW+20).attr('height',26).attr('rx',6).attr('ry',6).attr('fill','#fff').attr('opacity',0.9);
+      legend.append('rect').attr('x',0).attr('y',-6).attr('width',12).attr('height',12).attr('fill',colClin);
+      legend.append('text').attr('x',18).attr('y',4).text('Clinics');
+      legend.append('rect').attr('x',150).attr('y',-6).attr('width',12).attr('height',12).attr('fill',colTrav);
+      legend.append('text').attr('x',168).attr('y',4).text('% Traveling');
+    }
+
+    // --------------- Chart 5: Boxplot by clinic availability (median split) ---------------
+    function chart5(data) {
+      const svg = d3.select('#c5');
+      const m = { t: 40, r: 30, b: 50, l: 64 };
+      const W = 980, H = 520, w = W - m.l - m.r, h = H - m.t - m.b;
+      svg.attr('viewBox', `0 0 ${W} ${H}`);
+      const g = svg.append('g').attr('transform',`translate(${m.l},${m.t})`);
+
+      const rows = data.filter(d=> Number.isFinite(d.clinics) && Number.isFinite(d.ratePer1k));
+      const med = d3.median(rows, d=> d.clinics);
+      const grouped = rows.map(d => ({
+        grp: d.clinics >= med ? 'High clinics' : 'Low clinics',
+        val: d.ratePer1k,
+        state: d.state
+      }));
+
+      function fiveNum(arr){
+        const s = arr.slice().sort(d3.ascending);
+        return {
+          min: d3.min(s),
+          q1: d3.quantileSorted(s, 0.25),
+          med: d3.quantileSorted(s, 0.50),
+          q3: d3.quantileSorted(s, 0.75),
+          max: d3.max(s)
+        };
+      }
+
+      const groups = ['Low clinics','High clinics'];
+      const stats = groups.map(name => {
+        const vals = grouped.filter(d=>d.grp===name).map(d=>d.val).filter(Number.isFinite);
+        return { name, vals, ...fiveNum(vals) };
+      });
+
+      const x = d3.scaleBand().domain(groups).range([0,w]).padding(0.4);
+      const y = d3.scaleLinear().domain([0, d3.max(grouped, d=>d.val)||1]).nice().range([h,0]);
+
+      g.append('g').attr('class','axis').attr('transform',`translate(0,${h})`).call(d3.axisBottom(x));
+      g.append('g').attr('class','axis').call(d3.axisLeft(y));
+      g.append('text').attr('x', w/2).attr('y', h+36).attr('text-anchor','middle').text('Clinic availability (median split)');
+      g.append('text').attr('transform','rotate(-90)').attr('x', -h/2).attr('y', -46).attr('text-anchor','middle').text('Abortion rate per 1,000 (residence, 2020)');
+
+      const boxW = x.bandwidth();
+      const boxes = g.selectAll('.box').data(stats).join('g').attr('transform', d=>`translate(${x(d.name)},0)`);
+
+      boxes.append('rect')
+        .attr('x', boxW*0.15).attr('width', boxW*0.7)
+        .attr('y', d=> y(d.q3)).attr('height', d=> Math.max(1, y(d.q1)-y(d.q3)))
+        .attr('fill','#fde68a').attr('stroke','#111');
+
+      boxes.append('line')  // median
+        .attr('x1', boxW*0.15).attr('x2', boxW*0.85)
+        .attr('y1', d=> y(d.med)).attr('y2', d=> y(d.med))
+        .attr('stroke','#111').attr('stroke-width',1.5);
+
+      boxes.append('line').attr('x1', boxW*0.5).attr('x2', boxW*0.5).attr('y1', d=> y(d.min)).attr('y2', d=> y(d.q1)).attr('stroke','#111');
+      boxes.append('line').attr('x1', boxW*0.35).attr('x2', boxW*0.65).attr('y1', d=> y(d.min)).attr('y2', d=> y(d.min)).attr('stroke','#111');
+      boxes.append('line').attr('x1', boxW*0.5).attr('x2', boxW*0.5).attr('y1', d=> y(d.q3)).attr('y2', d=> y(d.max)).attr('stroke','#111');
+      boxes.append('line').attr('x1', boxW*0.35).attr('x2', boxW*0.65).attr('y1', d=> y(d.max)).attr('y2', d=> y(d.max)).attr('stroke','#111');
+
+      g.selectAll('.pt').data(grouped).join('circle')
+        .attr('class','pt').attr('r',2.8)
+        .attr('cx', d=> x(d.grp) + boxW/2 + (Math.random()-0.5)*boxW*0.5)
+        .attr('cy', d=> y(d.val))
+        .attr('fill','#f59e0b')
+        .on('mousemove',(ev,d)=> showTT(`<b>${d.state}</b><br/>Rate: ${d3.format('.1f')(d.val)}`, [ev.clientX, ev.clientY]))
+        .on('mouseleave', hideTT);
+    }
+
+    loadData().then(d => { chart7(d); chart5(d); });
+  </script>
+</body>
+</html>
