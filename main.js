@@ -275,5 +275,48 @@ legend.append('text').attr('x', 320).attr('y', 50).text('% Residents traveling o
     .attr('y2', yScatter(slope*d3.max(xVals)+intercept))
     .attr('stroke', 'red')
     .attr('stroke-width', 2);
+// After drawing axes
+scatterSvg.append('g')
+  .attr('transform', `translate(0,${scatterHeight})`)
+  .call(d3.axisBottom(xScatter).ticks(10).tickFormat(d => d + '%'));
+
+scatterSvg.append('g')
+  .call(d3.axisLeft(yScatter).ticks(10).tickFormat(d => d + '%'));
+
+// === Add axis labels ===
+scatterSvg.append('text')
+  .attr('class', 'x label')
+  .attr('x', scatterWidth / 2)
+  .attr('y', scatterHeight + 45)
+  .attr('text-anchor', 'middle')
+  .attr('font-size', '13px')
+  .text('% of Counties Without a Clinic (2020)');
+
+scatterSvg.append('text')
+  .attr('class', 'y label')
+  .attr('x', -scatterHeight / 2)
+  .attr('y', -55)
+  .attr('transform', 'rotate(-90)')
+  .attr('text-anchor', 'middle')
+  .attr('font-size', '13px')
+  .text('% of Residents Traveling Out of State (2020)');
+
+// === Add chart title ===
+scatterSvg.append('text')
+  .attr('x', scatterWidth / 2)
+  .attr('y', -20)
+  .attr('text-anchor', 'middle')
+  .attr('font-size', '18px')
+  .attr('font-weight', 'bold')
+  .text('Out-of-State Travel vs Local Clinic Scarcity by State');
+
+// === Add subtitle (optional, clarifies dots = states) ===
+scatterSvg.append('text')
+  .attr('x', scatterWidth / 2)
+  .attr('y', 0)
+  .attr('text-anchor', 'middle')
+  .attr('font-size', '12px')
+  .attr('fill', 'gray')
+  .text('Each circle represents one U.S. state');
 
 });
