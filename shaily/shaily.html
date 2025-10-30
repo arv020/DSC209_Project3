@@ -1,0 +1,44 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Shaily — Project 3</title>
+  <link rel="stylesheet" href="../main.css">
+  <style>
+    body { font: 14px/1.4 system-ui, sans-serif; margin: 1rem; }
+    #chart1 { position: relative; }
+    .tooltip {
+      position:absolute; pointer-events:none; display:none;
+      background:#fff; border:1px solid #ccc; padding:6px 8px;
+      border-radius:6px; font-size:12px;
+      box-shadow:0 2px 6px rgba(0,0,0,.06);
+    }
+  </style>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+  <h1>Shaily — Two Interactive Charts</h1>
+
+  <section>
+    <h2>Chart 1: Rate vs Providers</h2>
+    <label>Year:
+      <select id="yearSelect"></select>
+    </label>
+    <div id="chart1"></div>
+  </section>
+
+  <section>
+  <h2>Chart 2: % change in abortion clinics (2017–2020)</h2>
+  <label>Sort:
+    <select id="sort2">
+      <option value="dec">Largest increase → decrease</option>
+      <option value="inc">Largest decrease → increase</option>
+      <option value="az">A → Z</option>
+    </select>
+  </label>
+  <div id="chart2"></div>
+</section>
+
+  <script src="shaily.js"></script>
+</body>
+</html>
