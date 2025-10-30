@@ -57,7 +57,7 @@
 //   .attr('r', 2);
 // Import D3 and SheetJS from CDNs
 // Automatically download D3 and SheetJS from CDNs
- import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm';
+import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm';
 import * as XLSX from 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm';
 
 const columnState = "U.S. State";
@@ -76,6 +76,9 @@ async function loadAbortionData() {
 }
 
 loadAbortionData().then(data => {
+
+  console.log("Loaded columns:", Object.keys(data[0]));
+
 
 // -------------------- DIVERGENT HORIZONTAL BAR CHART -------------------- //
 const barMargin = { top: 100, right: 50, bottom: 50, left: 200 }, // more top space for legend
