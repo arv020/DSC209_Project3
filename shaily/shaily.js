@@ -112,11 +112,11 @@ function drawScatter(data) {
 //Chart2//
 /* ---------- Chart 2 (horizontal bars: % change in clinics) ---------- */
 function drawClinicsChange(data) {
- 
-  const w = 650,
-        m = { t: 30, r: 30, b: 40, l: 150 };
-  const barH = 16;
-  const h = m.t + m.b + barH * data.length;
+  
+  const w = 700,
+        m = { t: 40, r: 30, b: 40, l: 140 };
+  const barH = 12; 
+  const h = Math.max(300, m.t + m.b + barH * data.length); 
 
   const svg2 = d3.select('#chart2')
     .append('svg')
@@ -133,7 +133,8 @@ function drawClinicsChange(data) {
   const y = d3.scaleBand()
     .domain(data.map(d => d["U.S. State"]))
     .range([m.t, h - m.b])
-    .padding(0.25);
+    .padding(0.3);
+
 
   svg2.append('g')
     .attr('transform', `translate(0,${h - m.b})`)
@@ -147,6 +148,7 @@ function drawClinicsChange(data) {
     .selectAll('text')
     .style('font-size', '10px');
 
+
   svg2.selectAll('rect')
     .data(data)
     .enter()
@@ -155,7 +157,7 @@ function drawClinicsChange(data) {
     .attr('y', d => y(d["U.S. State"]))
     .attr('width', d => Math.abs(x(d["% change in the no. of abortion clinics, 2017-2020"]) - x(0)))
     .attr('height', y.bandwidth())
-    .attr('fill', '#377eb8');
+    .attr('fill', d => d["% change in the no. of abortion clinics, 2017-2020"] >= 0 ? '#4C9AFF' : '#FF6B6B');
 
   svg2.append('text')
     .attr('x', w / 2)
