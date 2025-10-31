@@ -112,121 +112,58 @@ function drawScatter(data) {
 //Chart2//
 /* ---------- Chart 2 (horizontal bars: % change in clinics) ---------- */
 function drawClinicsChange(data) {
-  const w = 950, m = { t: 40, r: 40, b: 40, l: 220 }; // wider + more left space
-  const barH = 24;
+ 
+  const w = 650,
+        m = { t: 30, r: 30, b: 40, l: 150 };
+  const barH = 16;
   const h = m.t + m.b + barH * data.length;
 
-  const root = d3.select('#chart2');
-  root.selectAll('*').remove();
-
-  const svg = root.append('svg').attr('width', w).attr('height', h);
-  const g = svg.append('g').attr('transform', `translate(${m.l},${m.t})`);
-  svg.style('font', '12px system-ui');
+  const svg2 = d3.select('#chart2')
+    .append('svg')
+    .attr('width', w)
+    .attr('height', h)
+    .style('max-width', '100%')
+    .style('height', 'auto');
 
   const x = d3.scaleLinear()
-    .domain(d3.extent(data, d => d.pct)).nice()
-    .range([0, w - m.l - m.r]);
+    .domain(d3.extent(data, d => d["% change in the no. of abortion clinics, 2017-2020"]))
+    .nice()
+    .range([m.l, w - m.r]);
 
   const y = d3.scaleBand()
-    .domain(data.map(d => d.state))
-    .range([0, h - m.t - m.b])
-    .padding(0.45);
+    .domain(data.map(d => d["U.S. State"]))
+    .range([m.t, h - m.b])
+    .padding(0.25);
 
-  const color = d3.scaleDiverging()
-    .domain([d3.min(data, d => d.pct), 0, d3.max(data, d => d.pct)])
-    .interpolator(d3.interpolateRdBu);
+  svg2.append('g')
+    .attr('transform', `translate(0,${h - m.b})`)
+    .call(d3.axisBottom(x).ticks(6))
+    .selectAll('text')
+    .style('font-size', '10px');
 
-  // X-axis
-  g.append('g')
-    .attr('transform', `translate(0,${h - m.t - m.b})`)
-    .call(d3.axisBottom(x).ticks(7).tickFormat(d => `${d}%`));
-
-  // Y-axis with wrapped labels
-  g.append('g')
+  svg2.append('g')
+    .attr('transform', `translate(${m.l},0)`)
     .call(d3.axisLeft(y))
     .selectAll('text')
-    .style('font-size', '11px')
-    .call(wrapText, 160); // wrap to fit
+    .style('font-size', '10px');
 
-  // Zero line
-  g.append('line')
-    .attr('x1', x(0)).attr('x2', x(0))
-    .attr('y1', 0).attr('y2', h - m.t - m.b)
-    .attr('stroke', '#999')
-    .attr('stroke-dasharray', '4,3');
+  svg2.selectAll('rect')
+    .data(data)
+    .enter()
+    .append('rect')
+    .attr('x', d => x(Math.min(0, d["% change in the no. of abortion clinics, 2017-2020"])))
+    .attr('y', d => y(d["U.S. State"]))
+    .attr('width', d => Math.abs(x(d["% change in the no. of abortion clinics, 2017-2020"]) - x(0)))
+    .attr('height', y.bandwidth())
+    .attr('fill', '#377eb8');
 
-  const tip = root.append('div')
-    .style('position', 'absolute')
-    .style('pointer-events', 'none')
-    .style('background', '#fff')
-    .style('border', '1px solid #ccc')
-    .style('padding', '6px 8px')
-    .style('border-radius', '6px')
-    .style('font', '12px system-ui')
-    .style('display', 'none');
-
-  const barsG = g.append('g');
-
-  function renderBars(arr) {
-    y.domain(arr.map(d => d.state));
-    barsG.selectAll('rect')
-      .data(arr, d => d.state)
-      .join('rect')
-      .attr('x', d => Math.min(x(0), x(d.pct)))
-      .attr('y', d => y(d.state))
-      .attr('height', y.bandwidth())
-      .attr('width', d => Math.abs(x(d.pct) - x(0)))
-      .attr('fill', d => color(d.pct))
-      .on('mouseenter', (e, d) => {
-        tip.style('display', 'block')
-           .html(`<strong>${d.state}</strong><br>% change in clinics (2017–2020): ${d.pct}%`);
-      })
-      .on('mousemove', (e) => {
-        const bb = root.node().getBoundingClientRect();
-        tip.style('left', (e.clientX - bb.left + 14) + 'px')
-           .style('top', (e.clientY - bb.top - 24) + 'px');
-      })
-      .on('mouseleave', () => tip.style('display', 'none'));
-  }
-
-  data.sort((a, b) => d3.descending(a.pct, b.pct));
-  renderBars(data);
-
-  d3.select('#sort2').on('change', function () {
-    const v = this.value;
-    if (v === 'dec') data.sort((a, b) => d3.descending(a.pct, b.pct));
-    else if (v === 'inc') data.sort((a, b) => d3.ascending(a.pct, b.pct));
-    else data.sort((a, b) => d3.ascending(a.state, b.state));
-    renderBars(data);
-  });
-
-  function wrapText(text, width) {
-    text.each(function() {
-      const text = d3.select(this);
-      const words = text.text().split(/\s+/).reverse();
-      let word, line = [], lineNumber = 0;
-      const y = text.attr('y'), dy = parseFloat(text.attr('dy')) || 0;
-      let tspan = text.text(null)
-                      .append('tspan')
-                      .attr('x', -5)
-                      .attr('y', y)
-                      .attr('dy', dy + 'em');
-      while (word = words.pop()) {
-        line.push(word);
-        tspan.text(line.join(' '));
-        if (tspan.node().getComputedTextLength() > width) {
-          line.pop();
-          tspan.text(line.join(' '));
-          line = [word];
-          tspan = text.append('tspan')
-                      .attr('x', -5)
-                      .attr('y', y)
-                      .attr('dy', ++lineNumber * 1.1 + dy + 'em')
-                      .text(word);
-        }
-      }
-    });
-  }
+  svg2.append('text')
+    .attr('x', w / 2)
+    .attr('y', 20)
+    .attr('text-anchor', 'middle')
+    .style('font-size', '12px')
+    .style('font-weight', '600')
+    .text('% Change in Abortion Clinics (2017–2020)');
 }
 
 
