@@ -111,60 +111,91 @@ function drawScatter(data) {
 
 //Chart2//
 /* ---------- Chart 2 (horizontal bars: % change in clinics) ---------- */
+const COL_CHANGE = '% change in the no. of abortion clinics, 2017-2020';
+
+let changeClinics = raw.map(r => {
+  const pct = +String(r[COL_CHANGE] ?? '').replace(/[^\d\-\.+]/g, '');
+  return { state: r['U.S. State'], pct };
+}).filter(d => d.state && Number.isFinite(d.pct));
+
+changeClinics.sort((a, b) => d3.descending(a.pct, b.pct));
+drawClinicsChange(changeClinics);
+
+d3.select('#sort2').on('change', function () {
+  const v = this.value; 
+  if (v === 'dec') changeClinics.sort((a, b) => d3.descending(a.pct, b.pct));
+  else if (v === 'inc') changeClinics.sort((a, b) => d3.ascending(a.pct, b.pct));
+  else changeClinics.sort((a, b) => d3.ascending(a.state, b.state));
+  drawClinicsChange(changeClinics);
+});
+
 function drawClinicsChange(data) {
-  
+  const host = d3.select('#chart2');
+  host.selectAll('*').remove();
+
+  if (!data?.length) {
+    host.append('p')
+      .style('color', '#b91c1c')
+      .text('No usable data for Chart 2. Check the CSV column "% change in the no. of abortion clinics, 2017-2020".');
+    return;
+  }
+
   const w = 700,
         m = { t: 40, r: 30, b: 40, l: 140 };
-  const barH = 12; 
-  const h = Math.max(300, m.t + m.b + barH * data.length); 
+  const barH = 12;
+  const h = Math.max(320, m.t + m.b + barH * data.length); // ensure a minimum height
 
-  const svg2 = d3.select('#chart2')
-    .append('svg')
+  const svg = host.append('svg')
     .attr('width', w)
     .attr('height', h)
     .style('max-width', '100%')
-    .style('height', 'auto');
+    .style('height', 'auto')
+    .style('font', '12px system-ui');
+
+  const vals = data.map(d => d.pct).filter(Number.isFinite);
+  if (!vals.length) {
+    host.append('p').style('color', '#b91c1c').text('Chart 2 has no numeric values.');
+    return;
+  }
 
   const x = d3.scaleLinear()
-    .domain(d3.extent(data, d => d["% change in the no. of abortion clinics, 2017-2020"]))
-    .nice()
+    .domain(d3.extent(vals)).nice()
     .range([m.l, w - m.r]);
 
   const y = d3.scaleBand()
-    .domain(data.map(d => d["U.S. State"]))
+    .domain(data.map(d => d.state))
     .range([m.t, h - m.b])
-    .padding(0.3);
+    .padding(0.30);
 
+  svg.append('line')
+    .attr('x1', x(0)).attr('x2', x(0))
+    .attr('y1', m.t).attr('y2', h - m.b)
+    .attr('stroke', '#9aa0a6').attr('stroke-dasharray', '4,3');
 
-  svg2.append('g')
+  svg.append('g')
     .attr('transform', `translate(0,${h - m.b})`)
-    .call(d3.axisBottom(x).ticks(6))
-    .selectAll('text')
-    .style('font-size', '10px');
+    .call(d3.axisBottom(x).ticks(6).tickFormat(d => `${d}%`))
+    .selectAll('text').style('font-size', '10px');
 
-  svg2.append('g')
+  svg.append('g')
     .attr('transform', `translate(${m.l},0)`)
     .call(d3.axisLeft(y))
-    .selectAll('text')
-    .style('font-size', '10px');
+    .selectAll('text').style('font-size', '10px');
 
-
-  svg2.selectAll('rect')
-    .data(data)
-    .enter()
-    .append('rect')
-    .attr('x', d => x(Math.min(0, d["% change in the no. of abortion clinics, 2017-2020"])))
-    .attr('y', d => y(d["U.S. State"]))
-    .attr('width', d => Math.abs(x(d["% change in the no. of abortion clinics, 2017-2020"]) - x(0)))
+  svg.selectAll('rect')
+    .data(data, d => d.state)
+    .join('rect')
+    .attr('x', d => x(Math.min(0, d.pct)))
+    .attr('y', d => y(d.state))
+    .attr('width', d => Math.abs(x(d.pct) - x(0)))
     .attr('height', y.bandwidth())
-    .attr('fill', d => d["% change in the no. of abortion clinics, 2017-2020"] >= 0 ? '#4C9AFF' : '#FF6B6B');
+    .attr('fill', d => d.pct >= 0 ? '#4C9AFF' : '#FF6B6B');
 
-  svg2.append('text')
-    .attr('x', w / 2)
-    .attr('y', 20)
+ 
+  svg.append('text')
+    .attr('x', w / 2).attr('y', 22)
     .attr('text-anchor', 'middle')
-    .style('font-size', '12px')
-    .style('font-weight', '600')
+    .style('font-weight', 600).style('font-size', '12px')
     .text('% Change in Abortion Clinics (2017–2020)');
 }
 
