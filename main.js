@@ -442,45 +442,77 @@ loadAbortionData().then(data => {
     .attr('stroke', '#333')
     .attr('stroke-width', 1);
 
-  // --- TOOLTIP --- //
+  // --HELPERS--//  
+  const fmtPct = d3.format(".0f");
+  let showAccess = true;  
+  let showTravel = true;
+
+   // --- TOOLTIP --- //
   const tooltip = d3.select('body')
     .append('div')
     .attr('class', 'tooltip')
     .style('position', 'absolute')
     .style('visibility', 'hidden')
     .style('background', '#fff')
-    .style('padding', '8px')
-    .style('border', '1px solid #ccc')
-    .style('border-radius', '4px')
-    .style('font-size', '13px');
+    .style('padding', '10px 12px')
+    .style('border', '1px solid #ddd')
+    .style('border-radius', '6px')
+    .style('box-shadow', '0 2px 8px rgba(0,0,0,.08)')
+    .style('font', '12px/1.3 system-ui');
 
   // --- LEGEND --- //
   const legend = svg.append('g')
-    .attr('class', 'legend')
-    .attr('transform', `translate(${width - 180}, -40)`);
+  .attr('class', 'legend')
+  .attr('transform', `translate(${width - 240}, -60)`);
 
-  const legendData = [
-    { color: '#d95f02', text: 'Access Gap' },
-    { color: '#1b9e77', text: '% Residents Traveling Out of State' }
-  ];
+legend.append('text')
+  .attr('x', 0)
+  .attr('y', -8)
+  .style('font-weight', 600)
+  .style('font-size', '12px')
+  .text('Series');
 
-  legend.selectAll('g')
-    .data(legendData)
-    .enter()
-    .append('g')
-    .attr('transform', (d, i) => `translate(0, ${i * 25})`)
-    .each(function(d) {
-      const g = d3.select(this);
-      g.append('rect')
-        .attr('width', 15)
-        .attr('height', 15)
-        .attr('fill', d.color);
-      g.append('text')
-        .attr('x', 22)
-        .attr('y', 12)
-        .attr('font-size', '13px')
-        .text(d.text);
-    });
+const legendItems = [
+  { key: 'access',  color: '#d95f02', label: 'Access Gap' },
+  { key: 'travel',  color: '#1b9e77', label: '% Residents Traveling Out of State' }
+];
+
+const li = legend.selectAll('.legend-item')
+  .data(legendItems)
+  .enter()
+  .append('g')
+  .attr('class', 'legend-item')
+  .attr('transform', (d,i) => `translate(0, ${i*22})`)
+  .style('cursor', 'pointer')
+  .on('click', (_, d) => {
+    if (d.key === 'access') showAccess = !showAccess;
+    if (d.key === 'travel') showTravel = !showTravel;
+    updateChart();       
+    renderLegend();     
+  });
+
+li.append('rect')
+  .attr('width', 14).attr('height', 14)
+  .attr('rx', 2).attr('ry', 2)
+  .attr('fill', d => d.color);
+
+li.append('text')
+  .attr('x', 20).attr('y', 11)
+  .style('font-size', '12px')
+  .text(d => d.label);
+
+// SMALL HELPER FUNCTION TO DIN A SERIES WHEN ITS HDDEN
+function renderLegend(){
+  li.selectAll('rect').attr('opacity', d => {
+    if (d.key === 'access') return showAccess ? 1 : 0.25;
+    if (d.key === 'travel') return showTravel ? 1 : 0.25;
+  });
+  li.selectAll('text').style('opacity', d => {
+    if (d.key === 'access') return showAccess ? 1 : 0.5;
+    if (d.key === 'travel') return showTravel ? 1 : 0.5;
+  });
+}
+renderLegend();
 
   // --- LABELS --- //
   const addLabels = filteredData => {
@@ -547,49 +579,79 @@ loadAbortionData().then(data => {
     // Update x-axis (optional if dynamic)
     svg.select('.x-axis')
       .transition().duration(500)
-      .call(d3.axisBottom(x).ticks(6).tickFormat(d => Math.abs(d) + '%'));
+      .call(d3.axisBottom(x).ticks(6).tickFormat(d => `${Math.abs(d)}%`));
 
     // --- BARS (negative) ---
     const negBars = svg.selectAll('.negative-bar')
-      .data(filteredData, d => d[columnState]);
+  .data(filteredData, d => d[columnState]);
 
-    negBars.join(
-      enter => enter.append('rect')
-        .attr('class', 'negative-bar')
-        .attr('y', d => y(d[columnState]))
-        .attr('x', d => x(-(+d[negativeCol] || 0)))
-        .attr('width', d => x(0) - x(-(+d[negativeCol] || 0)))
-        .attr('height', y.bandwidth())
-        .attr('fill', '#d95f02'),
-      update => update
-        .transition().duration(500)
-        .attr('y', d => y(d[columnState]))
-        .attr('x', d => x(-(+d[negativeCol] || 0)))
-        .attr('width', d => x(0) - x(-(+d[negativeCol] || 0)))
-        .attr('height', y.bandwidth()),
-      exit => exit.remove()
-    );
+negBars.join(
+  enter => enter.append('rect')
+    .attr('class', 'negative-bar')
+    .attr('y', d => y(d[columnState]))
+    .attr('x', d => x(-(+d[negativeCol] || 0)))
+    .attr('width', d => x(0) - x(-(+d[negativeCol] || 0)))
+    .attr('height', y.bandwidth())
+    .attr('fill', '#d95f02')
+    .on('mouseenter', (event, d) => {
+      tooltip
+        .html(
+          `<div style="font-weight:600;margin-bottom:4px">${d[columnState]}</div>
+           <div><span style="color:#d95f02">Access Gap:</span> ${fmtPct(+d[negativeCol])}%</div>
+           <div><span style="color:#1b9e77">Travel out of state:</span> ${fmtPct(+d[positiveCol])}%</div>`
+        )
+        .style('visibility', 'visible');
+    })
+    .on('mousemove', (event) => {
+      tooltip.style('top', (event.pageY + 14) + 'px')
+             .style('left', (event.pageX + 16) + 'px');
+    })
+    .on('mouseleave', () => tooltip.style('visibility', 'hidden')),
+  update => update
+    .transition().duration(500)
+    .attr('y', d => y(d[columnState]))
+    .attr('x', d => x(-(+d[negativeCol] || 0)))
+    .attr('width', d => x(0) - x(-(+d[negativeCol] || 0)))
+    .attr('height', y.bandwidth()),
+  exit => exit.remove()
+)
+.attr('display', showAccess ? null : 'none');
 
     // --- BARS (positive) ---
     const posBars = svg.selectAll('.positive-bar')
-      .data(filteredData, d => d[columnState]);
+  .data(filteredData, d => d[columnState]);
 
-    posBars.join(
-      enter => enter.append('rect')
-        .attr('class', 'positive-bar')
-        .attr('y', d => y(d[columnState]))
-        .attr('x', x(0))
-        .attr('width', d => x(+d[positiveCol] || 0) - x(0))
-        .attr('height', y.bandwidth())
-        .attr('fill', '#1b9e77'),
-      update => update
-        .transition().duration(500)
-        .attr('y', d => y(d[columnState]))
-        .attr('x', x(0))
-        .attr('width', d => x(+d[positiveCol] || 0) - x(0))
-        .attr('height', y.bandwidth()),
-      exit => exit.remove()
-    );
+posBars.join(
+  enter => enter.append('rect')
+    .attr('class', 'positive-bar')
+    .attr('y', d => y(d[columnState]))
+    .attr('x', x(0))
+    .attr('width', d => x(+d[positiveCol] || 0) - x(0))
+    .attr('height', y.bandwidth())
+    .attr('fill', '#1b9e77')
+    .on('mouseenter', (event, d) => {
+      tooltip
+        .html(
+          `<div style="font-weight:600;margin-bottom:4px">${d[columnState]}</div>
+           <div><span style="color:#1b9e77">Travel out of state:</span> ${fmtPct(+d[positiveCol])}%</div>
+           <div><span style="color:#d95f02">Access Gap:</span> ${fmtPct(+d[negativeCol])}%</div>`
+        )
+        .style('visibility', 'visible');
+    })
+    .on('mousemove', (event) => {
+      tooltip.style('top', (event.pageY + 14) + 'px')
+             .style('left', (event.pageX + 16) + 'px');
+    })
+    .on('mouseleave', () => tooltip.style('visibility', 'hidden')),
+  update => update
+    .transition().duration(500)
+    .attr('y', d => y(d[columnState]))
+    .attr('x', x(0))
+    .attr('width', d => x(+d[positiveCol] || 0) - x(0))
+    .attr('height', y.bandwidth()),
+  exit => exit.remove()
+)
+.attr('display', showTravel ? null : 'none');
 
     // Update labels
     addLabels(filteredData);
