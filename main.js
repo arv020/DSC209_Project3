@@ -659,7 +659,7 @@ posBars.join(
   }
 
   function renderStats(filteredData) {
-  // Group by Region
+  // GROUPED REGIONS
   const regions = d3.rollups(
     filteredData,
     v => ({
@@ -672,9 +672,9 @@ posBars.join(
     d => d.Region
   );
 
-  // Create table
+  //TABLES
   const container = d3.select('#stats-grid');
-  container.html(''); // Clear previous table
+  container.html(''); 
 
   const table = container.append('table')
     .style('border-collapse', 'collapse')
@@ -683,7 +683,7 @@ posBars.join(
   const thead = table.append('thead');
   const tbody = table.append('tbody');
 
-  // Table headers
+  // TABLE HEADERS
   const headers = ['Region', 'Number of States', 'Avg Access Gap', 'Max Access Gap', 'Avg Travel', 'Max Travel'];
   thead.append('tr')
     .selectAll('th')
@@ -696,19 +696,19 @@ posBars.join(
     .style('text-align', 'center')
     .style('background-color', '#f2f2f2');
 
-  // Compute color scales for heatmap
+  // COLOR SCALES FOR HEATMAP
   const accessValues = filteredData.map(d => +d[negativeCol]);
   const travelValues = filteredData.map(d => +d[positiveCol]);
 
   const accessScale = d3.scaleLinear()
     .domain([d3.min(accessValues), d3.max(accessValues)])
-    .range(['#fff5f0', '#d95f02']); // light → dark orange
+    .range(['#fff5f0', '#d95f02']); 
 
   const travelScale = d3.scaleLinear()
     .domain([d3.min(travelValues), d3.max(travelValues)])
-    .range(['#f7fcf5', '#1b9e77']); // light → dark green
+    .range(['#f7fcf5', '#1b9e77']); 
 
-  // Table rows
+  // TABLE ROWS
   const rows = tbody.selectAll('tr')
     .data(regions)
     .enter()
@@ -717,7 +717,7 @@ posBars.join(
   rows.selectAll('td')
     .data(d => [
       { value: d[0], type: 'region' },
-      { value: d[1].numStates, type: 'numStates' }, // NEW COLUMN
+      { value: d[1].numStates, type: 'numStates' }, 
       { value: d[1].avgAccessGap.toFixed(1) + '%', type: 'access', raw: d[1].avgAccessGap },
       { value: d[1].maxAccessGap + '%', type: 'access', raw: d[1].maxAccessGap },
       { value: d[1].avgTravel.toFixed(1) + '%', type: 'travel', raw: d[1].avgTravel },
@@ -732,7 +732,7 @@ posBars.join(
     .style('background-color', d => {
       if(d.type === 'access') return accessScale(d.raw);
       if(d.type === 'travel') return travelScale(d.raw);
-      return null; // region and numStates columns stay default
+      return null; 
     })
     .style('color', d => {
       if(d.type === 'access') return d.raw > d3.mean(accessValues) ? '#fff' : '#000';
@@ -740,10 +740,6 @@ posBars.join(
       return '#000';
     });
 }
-
-
-
-
   // --- EVENT LISTENERS ---
   d3.selectAll('#region-select, #sort-select, #topn-select').on('change', updateChart);
 

@@ -2,53 +2,81 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Project 3 — Viz Ladiez</title>
   <link rel="stylesheet" href="main.css" />
-  <title>Abortion Data Visualization</title>
 </head>
 <body>
 
-<h2 style="margin-bottom:4px">When Local Clinics Close, Women Travel Farther</h2>
-<p class="subtitle" style="margin-top:0;color:#555;">
-Comparing each state’s <strong>Access Gap</strong> (% of women living in a county without a clinic, 2020)
-against the <strong>% of residents traveling out of state for care (2020)</strong>. Filter by region, sort, or
-show Top-N.
-</p>
+  <header>
+    <h1>When Local Clinics Close, Women Travel Farther</h1>
+    <p class="subtitle">
+      Comparing each state’s <strong>Access Gap</strong> (% of women living in a county without a clinic)
+      and the <strong>% traveling out of state for care (2020)</strong>.
+    </p>
+  </header>
 
-<div id="controls">
-  <label>Region:</label>
-  <select id="region-select">
-    <option value="All">All</option>
-    <option value="West">West</option>
-    <option value="Midwest">Midwest</option>
-    <option value="South">South</option>
-    <option value="Northeast">Northeast</option>
-    <option value="Other">Other</option>
-  </select>
+  <main>
 
-  <label>Sort by:</label>
-  <select id="sort-select">
-    <option value="positive-desc">Travel % (largest first)</option>
-    <option value="positive-asc">Travel % (smallest first)</option>
-    <option value="negative-desc">Access Gap % (largest first)</option>
-    <option value="negative-asc">Access Gap % (smallest first)</option>
-  </select>
+    <section class="viz">
+      <div id="controls" class="controls">
+        <label for="region-select">Region</label>
+        <select id="region-select">
+          <option value="All">All</option>
+          <option value="West">West</option>
+          <option value="Midwest">Midwest</option>
+          <option value="South">South</option>
+          <option value="Northeast">Northeast</option>
+          <option value="Other">Other</option>
+        </select>
 
-  <label>Top N:</label>
-  <select id="topn-select">
-    <option value="All">All</option>
-    <option value="5">Top 5</option>
-    <option value="10">Top 10</option>
-    <option value="15">Top 15</option>
-  </select>
-</div>
+        <label for="sort-select">Sort by</label>
+        <select id="sort-select">
+          <option value="positive-desc">Travel % (largest first)</option>
+          <option value="positive-asc">Travel % (smallest first)</option>
+          <option value="negative-desc">Access Gap % (largest first)</option>
+          <option value="negative-asc">Access Gap % (smallest first)</option>
+        </select>
 
+        <label for="topn-select">Top N</label>
+        <select id="topn-select">
+          <option value="All">All</option>
+          <option value="5">Top 5</option>
+          <option value="10">Top 10</option>
+          <option value="15">Top 15</option>
+        </select>
+      </div>
 
-  <div id="bar-chart"></div>
-  <div id="stats-grid" style="margin-top: 30px;"></div>
+      <div id="bar-chart" class="card"></div>
+      <div id="stats-grid" class="card"></div>
+    </section>
 
-  
+    <section class="writeup card">
+      <h2>Write-up</h2>
+      <p>
+        This visualization explores how clinic accessibility impacts travel distances across U.S. states.
+        It highlights which regions show the largest “access gaps” and how these relate to the percentage of
+        patients traveling for care.
+      </p>
+    </section>
+
+    <section class="group card">
+      <h2>Group</h2>
+      <p><strong>Project 3 — Viz Ladiez</strong></p>
+      <ul>
+        <li>Arely Vasquez</li>
+        <li>Sahra Ranjbar</li>
+        <li>Shaily Nieves Adame</li>
+      </ul>
+    </section>
+
+  </main>
+
+  <footer>
+    <small>Built with D3.js | UC San Diego | Project 3</small>
+  </footer>
 
   <script type="module" src="./main.js"></script>
 </body>
 </html>
+
