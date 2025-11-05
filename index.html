@@ -9,13 +9,40 @@
 <body>
 
   <h2>When Local Clinics Close, Women Travel Farther: Uneven Access Across U.S. States</h2>
-  <div id="bar-chart"></div>
-  <div></div>
+<div id="controls">
+  <label>Region:</label>
+  <select id="region-select">
+    <option value="All">All</option>
+    <option value="West">West</option>
+    <option value="Midwest">Midwest</option>
+    <option value="South">South</option>
+    <option value="Northeast">Northeast</option>
+    <option value="Other">Other</option>
+  </select>
 
-  <h2>Out-of-State Travel vs County Clinic Scarcity</h2>
-  <div id="scatter-plot"></div>
-  <div>States with fewer local abortion clinics tend to see higher rates of residents traveling out of state for care. 
-    The first chart highlights how clinic scarcity varies sharply by state, while the second shows a positive, but uneven, relationship between limited clinic access and increased out-of-state travel.</div>
+  <label>Sort by:</label>
+  <select id="sort-select">
+    <option value="positive-desc">Travel % (largest first)</option>
+    <option value="positive-asc">Travel % (smallest first)</option>
+    <option value="negative-desc">Access Gap % (largest first)</option>
+    <option value="negative-asc">Access Gap % (smallest first)</option>
+  </select>
+
+  <label>Top N:</label>
+  <select id="topn-select">
+    <option value="All">All</option>
+    <option value="5">Top 5</option>
+    <option value="10">Top 10</option>
+    <option value="15">Top 15</option>
+  </select>
+</div>
+
+
+  <div id="bar-chart"></div>
+  <div id="stats-grid" style="margin-top: 30px;"></div>
+
+  
+
   <script type="module" src="./main.js"></script>
 </body>
 </html>

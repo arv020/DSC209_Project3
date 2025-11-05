@@ -1,66 +1,379 @@
-// // Automatically download D3 and SheetJS from CDNs
 // import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm';
 // import * as XLSX from 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm';
+
+// const columnState = "U.S. State";
 
 // async function loadAbortionData() {
 //   try {
 //     const response = await fetch('GuttmacherInstituteAbortionDataByState.xlsx');
 //     const arrayBuffer = await response.arrayBuffer();
-
 //     const workbook = XLSX.read(arrayBuffer, { type: 'array' });
 //     const sheetName = workbook.SheetNames[0];
 //     const sheet = workbook.Sheets[sheetName];
-
-//     const abortionData = XLSX.utils.sheet_to_json(sheet);
-//     return abortionData;
-
+//     return XLSX.utils.sheet_to_json(sheet);
 //   } catch (error) {
 //     console.error('Error loading abortion data:', error);
 //   }
 // }
 
-// // Example use
-// loadAbortionData().then(abortionData => {
-//   console.log('Loaded Excel data:', abortionData);
+// loadAbortionData().then(data => {
+
+//   console.log("Loaded columns:", Object.keys(data[0]));
+
+
+// // -------------------- DIVERGENT HORIZONTAL BAR CHART -------------------- //
+// const barMargin = { top: 100, right: 50, bottom: 50, left: 200 }, // more top space for legend
+//       barWidth = 900 - barMargin.left - barMargin.right,
+//       barHeight = 600 - barMargin.top - barMargin.bottom;
+
+// const negativeCol = '% of women aged 15-44 living in a county without a clinic, 2020';
+// const positiveCol = '% of residents obtaining abortions who traveled out of state for care, 2020';
+
+// const barSvg = d3.select('#bar-chart')
+//   .append('svg')
+//   .attr('width', barWidth + barMargin.left + barMargin.right)
+//   .attr('height', barHeight + barMargin.top + barMargin.bottom)
+//   .append('g')
+//   .attr('transform', `translate(${barMargin.left},${barMargin.top})`);
+
+// // Horizontal scale (X)
+// const xMax = d3.max(data, d => Math.max(+d[negativeCol] || 0, +d[positiveCol] || 0));
+// const xBar = d3.scaleLinear()
+//   .domain([-xMax * 1.1, xMax * 1.1])
+//   .range([0, barWidth]);
+
+//   // Sort data by positiveCol (Out-of-State Travel) ascending
+// data.sort((a, b) => (+a[positiveCol] || 0) - (+b[positiveCol] || 0));
+
+// // Then define y scale after sorting
+// const yBar = d3.scaleBand()
+//   .domain(data.map(d => d[columnState])) // now sorted
+//   .range([0, barHeight])
+//   .padding(0.2);
+
+// // Draw X-axis at zero
+// barSvg.append('g')
+//   .attr('transform', `translate(0,0)`)
+//   .call(d3.axisTop(xBar).ticks(5).tickFormat(d => Math.abs(d) + '%'));
+
+// // Draw Y-axis (States)
+// barSvg.append('g')
+//   .call(d3.axisLeft(yBar));
+
+// // Tooltip
+// const barTooltip = d3.select('body')
+//   .append('div')
+//   .attr('class', 'tooltip')
+//   .style('position', 'absolute')
+//   .style('visibility', 'hidden')
+//   .style('background', '#fff')
+//   .style('padding', '8px')
+//   .style('border', '1px solid #ccc')
+//   .style('border-radius', '4px')
+//   .style('font-size', '13px');
+
+// // Negative bars (left)
+// barSvg.selectAll('.negative-bar')
+//   .data(data)
+//   .enter()
+//   .append('rect')
+//   .attr('class', 'negative-bar')
+//   .attr('y', d => yBar(d[columnState]))
+//   .attr('x', d => xBar(-(+d[negativeCol] || 0)))
+//   .attr('width', d => xBar(0) - xBar(-(+d[negativeCol] || 0)))
+//   .attr('height', yBar.bandwidth())
+//   .attr('fill', '#d95f02')
+//   .on('mouseover', function(event, d) {
+//     d3.select(this).attr('opacity', 0.8);
+//     barTooltip.style('visibility', 'visible')
+//       .html(`${d[negativeCol]}%`);
+//   })
+//   .on('mousemove', event => {
+//     barTooltip.style('top', (event.pageY - 40) + 'px')
+//               .style('left', (event.pageX + 10) + 'px');
+//   })
+//   .on('mouseout', function() {
+//     d3.select(this).attr('opacity', 1);
+//     barTooltip.style('visibility', 'hidden');
+//   });
+
+// // Positive bars (right)
+// barSvg.selectAll('.positive-bar')
+//   .data(data)
+//   .enter()
+//   .append('rect')
+//   .attr('class', 'positive-bar')
+//   .attr('y', d => yBar(d[columnState]))
+//   .attr('x', xBar(0))
+//   .attr('width', d => xBar(+d[positiveCol] || 0) - xBar(0))
+//   .attr('height', yBar.bandwidth())
+//   .attr('fill', '#1b9e77')
+//   .on('mouseover', function(event, d) {
+//     d3.select(this).attr('opacity', 0.8);
+//     barTooltip.style('visibility', 'visible')
+//       .html(`${d[positiveCol]}%`);
+//   })
+//   .on('mousemove', event => {
+//     barTooltip.style('top', (event.pageY - 40) + 'px')
+//               .style('left', (event.pageX + 10) + 'px');
+//   })
+//   .on('mouseout', function() {
+//     d3.select(this).attr('opacity', 1);
+//     barTooltip.style('visibility', 'hidden');
+//   });
+
+// // Chart title
+// barSvg.append('text')
+//   .attr('x', barWidth / 2)
+//   .attr('y', -50)
+//   .attr('text-anchor', 'middle')
+//   .attr('font-size', '18px')
+//   .text('Local Clinic Access vs Out-of-State Travel by State');
+
+// // Legend (above plot)
+// const legend = barSvg.append('g')
+//   .attr('transform', `translate(0, -80)`);
+
+// legend.append('rect').attr('x', 0).attr('y', 40).attr('width', 15).attr('height', 15).attr('fill', '#d95f02');
+// legend.append('text').attr('x', 20).attr('y', 50).text('% Women in counties without a clinic');
+
+// legend.append('rect').attr('x', 300).attr('y', 40).attr('width', 15).attr('height', 15).attr('fill', '#1b9e77');
+// legend.append('text').attr('x', 320).attr('y', 50).text('% Residents traveling out of state');
+
 // });
 
+// import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm';
+// import * as XLSX from 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm';
 
-// const svg = d3.select('#abortion-plot');
+// const columnState = "U.S. State";
+// const negativeCol = "% of women aged 15-44 living in a county without a clinic, 2020";
+// const positiveCol = "% of residents obtaining abortions who traveled out of state for care, 2020";
 
-// const width = 1000;
-// const height = 300;
-// const margin = { top: 20, right: 20, bottom: 30, left: 40 };
+// async function loadAbortionData() {
+//   try {
+//     const response = await fetch('GuttmacherInstituteAbortionDataByState.xlsx');
+//     const arrayBuffer = await response.arrayBuffer();
+//     const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+//     const sheetName = workbook.SheetNames[0];
+//     const sheet = workbook.Sheets[sheetName];
+//     return XLSX.utils.sheet_to_json(sheet);
+//   } catch (error) {
+//     console.error('Error loading abortion data:', error);
+//   }
+// }
 
-// svg.attr('width', width);
-// svg.attr('height', height);
+// loadAbortionData().then(data => {
+//   console.log("Loaded columns:", Object.keys(data[0]));
 
-// // Create scales
-// const xScale = d3
-//   .scaleLinear()
-//   .domain([0, abortionData.hourly.temperature_2m.length - 1])
-//   .range([margin.left, width - margin.right]);
+//   // --- CONFIG --- //
+//   const margin = { top: 100, right: 50, bottom: 50, left: 200 };
+//   const width = 900 - margin.left - margin.right;
+//   const height = 600 - margin.top - margin.bottom;
 
-// const yScale = d3
-//   .scaleLinear()
-//   .domain([
-//     d3.min(abortionData.hourly.temperature_2m),
-//     d3.max(abortionData.hourly.temperature_2m),
-//   ])
-//   .range([height - margin.bottom, margin.top]);
+//   // Removing DC
+//   data = data.filter(d => d[columnState] !== "District of Columbia");
+//   // Define regions (customize as needed)
+//   const regions = {
+//     "West": ["California","Oregon","Washington","Nevada","Arizona","Utah","Colorado","Idaho","Montana","Hawaii","Alaska"],
+//     "Midwest": ["Illinois","Indiana","Iowa","Kansas","Michigan","Minnesota","Missouri","Nebraska","North Dakota","Ohio","South Dakota","Wisconsin"],
+//     "South": ["Alabama","Arkansas","Delaware","Florida","Georgia","Kentucky","Louisiana","Maryland","Mississippi","North Carolina","Oklahoma","South Carolina","Tennessee","Texas","Virginia","West Virginia"],
+//     "Northeast": ["Connecticut","Maine","Massachusetts","New Hampshire","New Jersey","New York","Pennsylvania","Rhode Island","Vermont"]
+//   };
 
-// svg
-//   .selectAll('circle')
-//   .data(abortionData.hourly.temperature_2m)
-//   .join('circle')
-//   .attr('cx', (d, i) => xScale(i))
-//   .attr('cy', (d) => yScale(d))
-//   .attr('r', 2);
-// Import D3 and SheetJS from CDNs
-// Automatically download D3 and SheetJS from CDNs
+//   // Add region property to each data row
+//   data.forEach(d => {
+//     d.Region = Object.keys(regions).find(r => regions[r].includes(d[columnState])) || "Other";
+//   });
+
+
+//   // Sort by positiveCol (descending)
+//   data.sort((a, b) => (+b[positiveCol] || 0) - (+a[positiveCol] || 0));
+
+//   // SVG setup
+//   const svg = d3.select('#bar-chart')
+//     .append('svg')
+//     .attr('width', width + margin.left + margin.right)
+//     .attr('height', height + margin.top + margin.bottom)
+//     .append('g')
+//     .attr('transform', `translate(${margin.left},${margin.top})`);
+
+//   // --- SCALES --- //
+//   const xMax = d3.max(data, d => Math.max(+d[negativeCol] || 0, +d[positiveCol] || 0));
+//   const x = d3.scaleLinear()
+//     .domain([-xMax * 1.1, xMax * 1.1])
+//     .range([0, width]);
+
+//   const y = d3.scaleBand()
+//     .domain(data.map(d => d[columnState]))
+//     .range([0, height])
+//     .padding(0.2);
+
+//   // --- AXES --- //
+// const xAxis = d3.axisBottom(x)
+//   .ticks(6)
+//   .tickFormat(d => Math.abs(d) + '%');
+
+// svg.append('g')
+//   .attr('class', 'x-axis')
+//   .attr('transform', `translate(0, ${height})`) // move to bottom
+//   .call(xAxis);
+
+
+//   svg.append('g')
+//     .attr('class', 'y-axis')
+//     .call(d3.axisLeft(y));
+
+//   // --- ZERO LINE --- //
+//   svg.append('line')
+//     .attr('x1', x(0))
+//     .attr('x2', x(0))
+//     .attr('y1', 0)
+//     .attr('y2', height)
+//     .attr('stroke', '#333')
+//     .attr('stroke-width', 1);
+
+//   // --- TOOLTIP --- //
+//   const tooltip = d3.select('body')
+//     .append('div')
+//     .attr('class', 'tooltip')
+//     .style('position', 'absolute')
+//     .style('visibility', 'hidden')
+//     .style('background', '#fff')
+//     .style('padding', '8px')
+//     .style('border', '1px solid #ccc')
+//     .style('border-radius', '4px')
+//     .style('font-size', '13px');
+
+//   // --- BARS --- //
+//   // Left (negative)
+//   svg.selectAll('.negative-bar')
+//     .data(data)
+//     .enter()
+//     .append('rect')
+//     .attr('class', 'negative-bar')
+//     .attr('y', d => y(d[columnState]))
+//     .attr('x', d => x(-(+d[negativeCol] || 0)))
+//     .attr('width', d => x(0) - x(-(+d[negativeCol] || 0)))
+//     .attr('height', y.bandwidth())
+//     .attr('fill', '#d95f02')
+//     .on('mouseover', function (event, d) {
+//       d3.select(this).attr('opacity', 0.8);
+//       tooltip.style('visibility', 'visible')
+//         .html(`<strong>${d[columnState]}</strong><br>${negativeCol}: ${d[negativeCol]}%`);
+//     })
+//     .on('mousemove', event => {
+//       tooltip.style('top', (event.pageY - 40) + 'px')
+//         .style('left', (event.pageX + 10) + 'px');
+//     })
+//     .on('mouseout', function () {
+//       d3.select(this).attr('opacity', 1);
+//       tooltip.style('visibility', 'hidden');
+//     });
+
+//   // Right (positive)
+//   svg.selectAll('.positive-bar')
+//     .data(data)
+//     .enter()
+//     .append('rect')
+//     .attr('class', 'positive-bar')
+//     .attr('y', d => y(d[columnState]))
+//     .attr('x', x(0))
+//     .attr('width', d => x(+d[positiveCol] || 0) - x(0))
+//     .attr('height', y.bandwidth())
+//     .attr('fill', '#1b9e77')
+//     .on('mouseover', function (event, d) {
+//       d3.select(this).attr('opacity', 0.8);
+//       tooltip.style('visibility', 'visible')
+//         .html(`<strong>${d[columnState]}</strong><br>${positiveCol}: ${d[positiveCol]}%`);
+//     })
+//     .on('mousemove', event => {
+//       tooltip.style('top', (event.pageY - 40) + 'px')
+//         .style('left', (event.pageX + 10) + 'px');
+//     })
+//     .on('mouseout', function () {
+//       d3.select(this).attr('opacity', 1);
+//       tooltip.style('visibility', 'hidden');
+//     });
+
+//   // --- TITLES & LEGEND --- //
+//   svg.append('text')
+//     .attr('x', width / 2)
+//     .attr('y', -60)
+//     .attr('text-anchor', 'middle')
+//     .attr('font-size', '18px')
+//     .attr('font-weight', '600')
+//     .text('Divergent Bar Chart: Local Clinic Access vs Out-of-State Travel (2020)');
+
+//   // // Legend
+//   // const legend = svg.append('g').attr('transform', `translate(${width / 3}, -40)`);
+
+//   // legend.append('rect').attr('x', 0).attr('width', 15).attr('height', 15).attr('fill', '#d95f02');
+//   // legend.append('text').attr('x', 22).attr('y', 12).text('Access Gap');
+
+//   // legend.append('rect').attr('x', 250).attr('width', 15).attr('height', 15).attr('fill', '#1b9e77');
+//   // legend.append('text').attr('x', 272).attr('y', 12).text('% Residents Traveling Out of State');
+
+
+// // --- LEGEND (top-right, stacked) --- //
+// const legend = svg.append('g')
+//   .attr('class', 'legend')
+//   .attr('transform', `translate(${width - 180}, -40)`); // top-right offset
+
+// const legendData = [
+//   { color: '#d95f02', text: 'Access Gap' },
+//   { color: '#1b9e77', text: '% Residents Traveling Out of State' }
+// ];
+
+// // Stack vertically
+// legend.selectAll('g')
+//   .data(legendData)
+//   .enter()
+//   .append('g')
+//   .attr('transform', (d, i) => `translate(0, ${i * 25})`) // 25px spacing between items
+//   .each(function(d) {
+//     const g = d3.select(this);
+//     g.append('rect')
+//       .attr('width', 15)
+//       .attr('height', 15)
+//       .attr('fill', d.color);
+    
+//     g.append('text')
+//       .attr('x', 22)
+//       .attr('y', 12)
+//       .attr('font-size', '13px')
+//       .text(d.text);
+//   });
+
+
+//   // --- LABELS (optional) --- //
+//   svg.selectAll('.value-label-left')
+//     .data(data)
+//     .enter()
+//     .append('text')
+//     .attr('x', d => x(-(+d[negativeCol] || 0)) - 5)
+//     .attr('y', d => y(d[columnState]) + y.bandwidth() / 2 + 4)
+//     .attr('text-anchor', 'end')
+//     .attr('font-size', '11px')
+//     .text(d => d[negativeCol] ? d[negativeCol] + '%' : '');
+
+//   svg.selectAll('.value-label-right')
+//     .data(data)
+//     .enter()
+//     .append('text')
+//     .attr('x', d => x(+d[positiveCol] || 0) + 5)
+//     .attr('y', d => y(d[columnState]) + y.bandwidth() / 2 + 4)
+//     .attr('text-anchor', 'start')
+//     .attr('font-size', '11px')
+//     .text(d => d[positiveCol] ? d[positiveCol] + '%' : '');
+// }
+// );
+
 import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7.9.0/+esm';
 import * as XLSX from 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm';
 
 const columnState = "U.S. State";
+const negativeCol = "% of women aged 15-44 living in a county without a clinic, 2020";
+const positiveCol = "% of residents obtaining abortions who traveled out of state for care, 2020";
 
 async function loadAbortionData() {
   try {
@@ -76,250 +389,303 @@ async function loadAbortionData() {
 }
 
 loadAbortionData().then(data => {
+  // Remove DC
+  data = data.filter(d => d[columnState] !== "District of Columbia");
 
-  console.log("Loaded columns:", Object.keys(data[0]));
+  // Define regions
+  const regions = {
+    "West": ["California","Oregon","Washington","Nevada","Arizona","Utah","Colorado","Idaho","Montana","Hawaii","Alaska", "Wyoming", "New Mexico"],
+    "Midwest": ["Illinois","Indiana","Iowa","Kansas","Michigan","Minnesota","Missouri","Nebraska","North Dakota","Ohio","South Dakota","Wisconsin"],
+    "South": ["Alabama","Arkansas","Delaware","Florida","Georgia","Kentucky","Louisiana","Maryland","Mississippi","North Carolina","Oklahoma","South Carolina","Tennessee","Texas","Virginia","West Virginia"],
+    "Northeast": ["Connecticut","Maine","Massachusetts","New Hampshire","New Jersey","New York","Pennsylvania","Rhode Island","Vermont"]
+  };
 
-
-// -------------------- DIVERGENT HORIZONTAL BAR CHART -------------------- //
-const barMargin = { top: 100, right: 50, bottom: 50, left: 200 }, // more top space for legend
-      barWidth = 900 - barMargin.left - barMargin.right,
-      barHeight = 600 - barMargin.top - barMargin.bottom;
-
-const negativeCol = '% of women aged 15-44 living in a county without a clinic, 2020';
-const positiveCol = '% of residents obtaining abortions who traveled out of state for care, 2020';
-
-const barSvg = d3.select('#bar-chart')
-  .append('svg')
-  .attr('width', barWidth + barMargin.left + barMargin.right)
-  .attr('height', barHeight + barMargin.top + barMargin.bottom)
-  .append('g')
-  .attr('transform', `translate(${barMargin.left},${barMargin.top})`);
-
-// Horizontal scale (X)
-const xMax = d3.max(data, d => Math.max(+d[negativeCol] || 0, +d[positiveCol] || 0));
-const xBar = d3.scaleLinear()
-  .domain([-xMax * 1.1, xMax * 1.1])
-  .range([0, barWidth]);
-
-  // Sort data by positiveCol (Out-of-State Travel) ascending
-data.sort((a, b) => (+a[positiveCol] || 0) - (+b[positiveCol] || 0));
-
-// Then define y scale after sorting
-const yBar = d3.scaleBand()
-  .domain(data.map(d => d[columnState])) // now sorted
-  .range([0, barHeight])
-  .padding(0.2);
-
-// Draw X-axis at zero
-barSvg.append('g')
-  .attr('transform', `translate(0,0)`)
-  .call(d3.axisTop(xBar).ticks(5).tickFormat(d => Math.abs(d) + '%'));
-
-// Draw Y-axis (States)
-barSvg.append('g')
-  .call(d3.axisLeft(yBar));
-
-// Tooltip
-const barTooltip = d3.select('body')
-  .append('div')
-  .attr('class', 'tooltip')
-  .style('position', 'absolute')
-  .style('visibility', 'hidden')
-  .style('background', '#fff')
-  .style('padding', '8px')
-  .style('border', '1px solid #ccc')
-  .style('border-radius', '4px')
-  .style('font-size', '13px');
-
-// Negative bars (left)
-barSvg.selectAll('.negative-bar')
-  .data(data)
-  .enter()
-  .append('rect')
-  .attr('class', 'negative-bar')
-  .attr('y', d => yBar(d[columnState]))
-  .attr('x', d => xBar(-(+d[negativeCol] || 0)))
-  .attr('width', d => xBar(0) - xBar(-(+d[negativeCol] || 0)))
-  .attr('height', yBar.bandwidth())
-  .attr('fill', '#d95f02')
-  .on('mouseover', function(event, d) {
-    d3.select(this).attr('opacity', 0.8);
-    barTooltip.style('visibility', 'visible')
-      .html(`${d[negativeCol]}%`);
-  })
-  .on('mousemove', event => {
-    barTooltip.style('top', (event.pageY - 40) + 'px')
-              .style('left', (event.pageX + 10) + 'px');
-  })
-  .on('mouseout', function() {
-    d3.select(this).attr('opacity', 1);
-    barTooltip.style('visibility', 'hidden');
+  data.forEach(d => {
+    d.Region = Object.keys(regions).find(r => regions[r].includes(d[columnState])) || "Other";
   });
 
-// Positive bars (right)
-barSvg.selectAll('.positive-bar')
-  .data(data)
-  .enter()
-  .append('rect')
-  .attr('class', 'positive-bar')
-  .attr('y', d => yBar(d[columnState]))
-  .attr('x', xBar(0))
-  .attr('width', d => xBar(+d[positiveCol] || 0) - xBar(0))
-  .attr('height', yBar.bandwidth())
-  .attr('fill', '#1b9e77')
-  .on('mouseover', function(event, d) {
-    d3.select(this).attr('opacity', 0.8);
-    barTooltip.style('visibility', 'visible')
-      .html(`${d[positiveCol]}%`);
-  })
-  .on('mousemove', event => {
-    barTooltip.style('top', (event.pageY - 40) + 'px')
-              .style('left', (event.pageX + 10) + 'px');
-  })
-  .on('mouseout', function() {
-    d3.select(this).attr('opacity', 1);
-    barTooltip.style('visibility', 'hidden');
-  });
+  // --- CONFIG --- //
+  const margin = { top: 100, right: 50, bottom: 50, left: 200 };
+  const width = 900 - margin.left - margin.right;
+  const height = 600 - margin.top - margin.bottom;
 
-// Chart title
-barSvg.append('text')
-  .attr('x', barWidth / 2)
-  .attr('y', -50)
-  .attr('text-anchor', 'middle')
-  .attr('font-size', '18px')
-  .text('Local Clinic Access vs Out-of-State Travel by State');
-
-// Legend (above plot)
-const legend = barSvg.append('g')
-  .attr('transform', `translate(0, -80)`);
-
-legend.append('rect').attr('x', 0).attr('y', 40).attr('width', 15).attr('height', 15).attr('fill', '#d95f02');
-legend.append('text').attr('x', 20).attr('y', 50).text('% Women in counties without a clinic');
-
-legend.append('rect').attr('x', 300).attr('y', 40).attr('width', 15).attr('height', 15).attr('fill', '#1b9e77');
-legend.append('text').attr('x', 320).attr('y', 50).text('% Residents traveling out of state');
-
-
-  // -------------------- SCATTER PLOT -------------------- //
-  const scatterMargin = { top: 50, right: 50, bottom: 60, left: 80 },
-        scatterWidth = 700,
-        scatterHeight = 400;
-
-  const xCol = '% of counties without a known clinic, 2020';
-  const yCol = '% of residents obtaining abortions who traveled out of state for care, 2020';
-
-  const scatterSvg = d3.select('#scatter-plot')
+  // SVG setup
+  const svg = d3.select('#bar-chart')
     .append('svg')
-    .attr('width', scatterWidth + scatterMargin.left + scatterMargin.right)
-    .attr('height', scatterHeight + scatterMargin.top + scatterMargin.bottom)
+    .attr('width', width + margin.left + margin.right)
+    .attr('height', height + margin.top + margin.bottom)
     .append('g')
-    .attr('transform', `translate(${scatterMargin.left},${scatterMargin.top})`);
+    .attr('transform', `translate(${margin.left},${margin.top})`);
 
-  const xScatter = d3.scaleLinear()
-    .domain([0, d3.max(data, d => d[xCol])])
-    .range([0, scatterWidth]);
+  // --- SCALES --- //
+  const xMax = d3.max(data, d => Math.max(+d[negativeCol] || 0, +d[positiveCol] || 0));
+  const x = d3.scaleLinear()
+    .domain([-xMax * 1.1, xMax * 1.1])
+    .range([0, width]);
 
-  const yScatter = d3.scaleLinear()
-    .domain([0, d3.max(data, d => d[yCol])])
-    .range([scatterHeight, 0]);
+  const y = d3.scaleBand()
+    .range([0, height])
+    .padding(0.2);
 
-  scatterSvg.append('g')
-    .attr('transform', `translate(0,${scatterHeight})`)
-    .call(d3.axisBottom(xScatter).ticks(10).tickFormat(d => d + '%'));
-  scatterSvg.append('g')
-    .call(d3.axisLeft(yScatter).ticks(10).tickFormat(d => d + '%'));
+  // --- AXES --- //
+  svg.append('g').attr('class', 'x-axis')
+    .attr('transform', `translate(0, ${height})`);
 
-  const scatterTooltip = d3.select('body')
+  svg.append('g').attr('class', 'y-axis');
+
+  // --- ZERO LINE --- //
+  svg.append('line')
+    .attr('x1', x(0))
+    .attr('x2', x(0))
+    .attr('y1', 0)
+    .attr('y2', height)
+    .attr('stroke', '#333')
+    .attr('stroke-width', 1);
+
+  // --- TOOLTIP --- //
+  const tooltip = d3.select('body')
     .append('div')
+    .attr('class', 'tooltip')
     .style('position', 'absolute')
-    .style('background', 'white')
+    .style('visibility', 'hidden')
+    .style('background', '#fff')
+    .style('padding', '8px')
     .style('border', '1px solid #ccc')
-    .style('padding', '6px 10px')
-    .style('border-radius', '5px')
-    .style('pointer-events', 'none')
-    .style('font-size', '13px')
-    .style('visibility', 'hidden');
+    .style('border-radius', '4px')
+    .style('font-size', '13px');
 
-  scatterSvg.selectAll('.point')
-    .data(data)
+  // --- LEGEND --- //
+  const legend = svg.append('g')
+    .attr('class', 'legend')
+    .attr('transform', `translate(${width - 180}, -40)`);
+
+  const legendData = [
+    { color: '#d95f02', text: 'Access Gap' },
+    { color: '#1b9e77', text: '% Residents Traveling Out of State' }
+  ];
+
+  legend.selectAll('g')
+    .data(legendData)
     .enter()
-    .append('circle')
-    .attr('class','point')
-    .attr('cx', d => xScatter(d[xCol]))
-    .attr('cy', d => yScatter(d[yCol]))
-    .attr('r', 6)
-    .attr('fill', '#69b3a2')
-    .on('mouseover', (event,d) => {
-      d3.select(event.currentTarget).attr('fill','orange');
-      scatterTooltip.style('visibility','visible')
-        .html(`<b>${d[columnState]}</b><br>${xCol}: ${d[xCol]}%<br>${yCol}: ${d[yCol]}%`);
-    })
-    .on('mousemove', event => {
-      scatterTooltip.style('top', (event.pageY - 40) + 'px')
-                    .style('left', (event.pageX + 10) + 'px');
-    })
-    .on('mouseout', event => {
-      d3.select(event.currentTarget).attr('fill','#69b3a2');
-      scatterTooltip.style('visibility','hidden');
+    .append('g')
+    .attr('transform', (d, i) => `translate(0, ${i * 25})`)
+    .each(function(d) {
+      const g = d3.select(this);
+      g.append('rect')
+        .attr('width', 15)
+        .attr('height', 15)
+        .attr('fill', d.color);
+      g.append('text')
+        .attr('x', 22)
+        .attr('y', 12)
+        .attr('font-size', '13px')
+        .text(d.text);
     });
 
-  // Trend line
-  const xVals = data.map(d => d[xCol]);
-  const yVals = data.map(d => d[yCol]);
-  const xMean = d3.mean(xVals);
-  const yMean = d3.mean(yVals);
-  const slope = d3.sum(xVals.map((x,i)=> (x-xMean)*(yVals[i]-yMean))) / d3.sum(xVals.map(x => Math.pow(x-xMean,2)));
-  const intercept = yMean - slope*xMean;
+  // --- LABELS --- //
+  const addLabels = filteredData => {
+    svg.selectAll('.value-label-left').remove();
+    svg.selectAll('.value-label-right').remove();
 
-  scatterSvg.append('line')
-    .attr('x1', xScatter(d3.min(xVals)))
-    .attr('y1', yScatter(slope*d3.min(xVals)+intercept))
-    .attr('x2', xScatter(d3.max(xVals)))
-    .attr('y2', yScatter(slope*d3.max(xVals)+intercept))
-    .attr('stroke', 'red')
-    .attr('stroke-width', 2);
-// After drawing axes
-scatterSvg.append('g')
-  .attr('transform', `translate(0,${scatterHeight})`)
-  .call(d3.axisBottom(xScatter).ticks(10).tickFormat(d => d + '%'));
+    svg.selectAll('.value-label-left')
+      .data(filteredData)
+      .enter()
+      .append('text')
+      .attr('class', 'value-label-left')
+      .attr('x', d => x(-(+d[negativeCol] || 0)) - 5)
+      .attr('y', d => y(d[columnState]) + y.bandwidth() / 2 + 4)
+      .attr('text-anchor', 'end')
+      .attr('font-size', '11px')
+      .text(d => d[negativeCol] ? d[negativeCol] + '%' : '');
 
-scatterSvg.append('g')
-  .call(d3.axisLeft(yScatter).ticks(10).tickFormat(d => d + '%'));
+    svg.selectAll('.value-label-right')
+      .data(filteredData)
+      .enter()
+      .append('text')
+      .attr('class', 'value-label-right')
+      .attr('x', d => x(+d[positiveCol] || 0) + 5)
+      .attr('y', d => y(d[columnState]) + y.bandwidth() / 2 + 4)
+      .attr('text-anchor', 'start')
+      .attr('font-size', '11px')
+      .text(d => d[positiveCol] ? d[positiveCol] + '%' : '');
+  };
 
-// === Add axis labels ===
-scatterSvg.append('text')
-  .attr('class', 'x label')
-  .attr('x', scatterWidth / 2)
-  .attr('y', scatterHeight + 45)
-  .attr('text-anchor', 'middle')
-  .attr('font-size', '13px')
-  .text('% of Counties Without a Clinic (2020)');
+  // --- UPDATE FUNCTION --- //
+  function updateChart() {
+    let selectedRegion = d3.select('#region-select').node().value;
+    let sortOption = d3.select('#sort-select').node().value;
+    let topN = d3.select('#topn-select').node().value;
 
-scatterSvg.append('text')
-  .attr('class', 'y label')
-  .attr('x', -scatterHeight / 2)
-  .attr('y', -55)
-  .attr('transform', 'rotate(-90)')
-  .attr('text-anchor', 'middle')
-  .attr('font-size', '13px')
-  .text('% of Residents Traveling Out of State (2020)');
+    let filteredData = selectedRegion === "All" ? data : data.filter(d => d.Region === selectedRegion);
 
-// === Add chart title ===
-scatterSvg.append('text')
-  .attr('x', scatterWidth / 2)
-  .attr('y', -20)
-  .attr('text-anchor', 'middle')
-  .attr('font-size', '18px')
-  .attr('font-weight', 'bold')
-  .text('Out-of-State Travel vs Local Clinic Scarcity by State');
+    // Sort
+    switch(sortOption){
+      case 'positive-desc':
+        filteredData.sort((a,b) => (+b[positiveCol] || 0) - (+a[positiveCol] || 0));
+        break;
+      case 'positive-asc':
+        filteredData.sort((a,b) => (+a[positiveCol] || 0) - (+b[positiveCol] || 0));
+        break;
+      case 'negative-desc':
+        filteredData.sort((a,b) => (+b[negativeCol] || 0) - (+a[negativeCol] || 0));
+        break;
+      case 'negative-asc':
+        filteredData.sort((a,b) => (+a[negativeCol] || 0) - (+b[negativeCol] || 0));
+        break;
+    }
 
-// === Add subtitle (optional, clarifies dots = states) ===
-scatterSvg.append('text')
-  .attr('x', scatterWidth / 2)
-  .attr('y', 0)
-  .attr('text-anchor', 'middle')
-  .attr('font-size', '12px')
-  .attr('fill', 'gray')
-  .text('Each circle represents one U.S. state');
+    if(topN !== "All") filteredData = filteredData.slice(0, +topN);
+
+    // Update y-scale
+    y.domain(filteredData.map(d => d[columnState]));
+
+    // Update y-axis
+    svg.select('.y-axis')
+      .transition().duration(500)
+      .call(d3.axisLeft(y));
+
+    // Update x-axis (optional if dynamic)
+    svg.select('.x-axis')
+      .transition().duration(500)
+      .call(d3.axisBottom(x).ticks(6).tickFormat(d => Math.abs(d) + '%'));
+
+    // --- BARS (negative) ---
+    const negBars = svg.selectAll('.negative-bar')
+      .data(filteredData, d => d[columnState]);
+
+    negBars.join(
+      enter => enter.append('rect')
+        .attr('class', 'negative-bar')
+        .attr('y', d => y(d[columnState]))
+        .attr('x', d => x(-(+d[negativeCol] || 0)))
+        .attr('width', d => x(0) - x(-(+d[negativeCol] || 0)))
+        .attr('height', y.bandwidth())
+        .attr('fill', '#d95f02'),
+      update => update
+        .transition().duration(500)
+        .attr('y', d => y(d[columnState]))
+        .attr('x', d => x(-(+d[negativeCol] || 0)))
+        .attr('width', d => x(0) - x(-(+d[negativeCol] || 0)))
+        .attr('height', y.bandwidth()),
+      exit => exit.remove()
+    );
+
+    // --- BARS (positive) ---
+    const posBars = svg.selectAll('.positive-bar')
+      .data(filteredData, d => d[columnState]);
+
+    posBars.join(
+      enter => enter.append('rect')
+        .attr('class', 'positive-bar')
+        .attr('y', d => y(d[columnState]))
+        .attr('x', x(0))
+        .attr('width', d => x(+d[positiveCol] || 0) - x(0))
+        .attr('height', y.bandwidth())
+        .attr('fill', '#1b9e77'),
+      update => update
+        .transition().duration(500)
+        .attr('y', d => y(d[columnState]))
+        .attr('x', x(0))
+        .attr('width', d => x(+d[positiveCol] || 0) - x(0))
+        .attr('height', y.bandwidth()),
+      exit => exit.remove()
+    );
+
+    // Update labels
+    addLabels(filteredData);
+    renderStats(filteredData);
+  }
+
+  function renderStats(filteredData) {
+  // Group by Region
+  const regions = d3.rollups(
+    filteredData,
+    v => ({
+      numStates: v.length,
+      avgAccessGap: d3.mean(v, d => +d[negativeCol]),
+      maxAccessGap: d3.max(v, d => +d[negativeCol]),
+      avgTravel: d3.mean(v, d => +d[positiveCol]),
+      maxTravel: d3.max(v, d => +d[positiveCol])
+    }),
+    d => d.Region
+  );
+
+  // Create table
+  const container = d3.select('#stats-grid');
+  container.html(''); // Clear previous table
+
+  const table = container.append('table')
+    .style('border-collapse', 'collapse')
+    .style('width', '100%');
+
+  const thead = table.append('thead');
+  const tbody = table.append('tbody');
+
+  // Table headers
+  const headers = ['Region', 'Number of States', 'Avg Access Gap', 'Max Access Gap', 'Avg Travel', 'Max Travel'];
+  thead.append('tr')
+    .selectAll('th')
+    .data(headers)
+    .enter()
+    .append('th')
+    .text(d => d)
+    .style('border', '1px solid #ccc')
+    .style('padding', '6px')
+    .style('text-align', 'center')
+    .style('background-color', '#f2f2f2');
+
+  // Compute color scales for heatmap
+  const accessValues = filteredData.map(d => +d[negativeCol]);
+  const travelValues = filteredData.map(d => +d[positiveCol]);
+
+  const accessScale = d3.scaleLinear()
+    .domain([d3.min(accessValues), d3.max(accessValues)])
+    .range(['#fff5f0', '#d95f02']); // light → dark orange
+
+  const travelScale = d3.scaleLinear()
+    .domain([d3.min(travelValues), d3.max(travelValues)])
+    .range(['#f7fcf5', '#1b9e77']); // light → dark green
+
+  // Table rows
+  const rows = tbody.selectAll('tr')
+    .data(regions)
+    .enter()
+    .append('tr');
+
+  rows.selectAll('td')
+    .data(d => [
+      { value: d[0], type: 'region' },
+      { value: d[1].numStates, type: 'numStates' }, // NEW COLUMN
+      { value: d[1].avgAccessGap.toFixed(1) + '%', type: 'access', raw: d[1].avgAccessGap },
+      { value: d[1].maxAccessGap + '%', type: 'access', raw: d[1].maxAccessGap },
+      { value: d[1].avgTravel.toFixed(1) + '%', type: 'travel', raw: d[1].avgTravel },
+      { value: d[1].maxTravel + '%', type: 'travel', raw: d[1].maxTravel }
+    ])
+    .enter()
+    .append('td')
+    .text(d => d.value)
+    .style('border', '1px solid #ccc')
+    .style('padding', '6px')
+    .style('text-align', 'center')
+    .style('background-color', d => {
+      if(d.type === 'access') return accessScale(d.raw);
+      if(d.type === 'travel') return travelScale(d.raw);
+      return null; // region and numStates columns stay default
+    })
+    .style('color', d => {
+      if(d.type === 'access') return d.raw > d3.mean(accessValues) ? '#fff' : '#000';
+      if(d.type === 'travel') return d.raw > d3.mean(travelValues) ? '#fff' : '#000';
+      return '#000';
+    });
+}
+
+
+
+
+  // --- EVENT LISTENERS ---
+  d3.selectAll('#region-select, #sort-select, #topn-select').on('change', updateChart);
+
+  // --- INITIAL DRAW ---
+  updateChart();
 
 });
