@@ -420,7 +420,7 @@ loadAbortionData().then(data => {
   // --- SCALES --- //
   const xMax = d3.max(data, d => Math.max(+d[negativeCol] || 0, +d[positiveCol] || 0));
   const x = d3.scaleLinear()
-    .domain([-xMax * 1.1, xMax * 1.1])
+    .domain([-xMax * 1.1, xMax * 1.2])
     .range([0, width]);
 
   const y = d3.scaleBand()
@@ -653,8 +653,19 @@ posBars.join(
 )
 .attr('display', showTravel ? null : 'none');
 
-    // Update labels
+    // // Update labels
+    // addLabels(filteredData);
+    // renderStats(filteredData);
+    
+    // -- Update labels
     addLabels(filteredData);
+
+    // keep label visibility in sync with the legend/series toggles
+    const root = d3.select('#bar-chart svg');   // if you already have `svg` in scope, use that instead
+    root.selectAll('.value-label-left')   .attr('display', showAccess ? null : 'none');  // Access Gap labels
+    root.selectAll('.value-label-right')  .attr('display', showTravel ? null : 'none');  // Travel % labels
+
+    // update the stats table
     renderStats(filteredData);
   }
 
@@ -793,3 +804,5 @@ posBars.join(
     mo.observe(host, { childList: true, subtree: true });
   }
 })();
+
+
