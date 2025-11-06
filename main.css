@@ -121,3 +121,8 @@ footer {
 }
 
 
+/* Focus + mute on hover */
+.positive-bar, .negative-bar { transition: opacity .15s ease; }
+.dim { opacity: .25; }
+.hi { opacity: 1 !important; filter: drop-shadow(0 0 0.25rem rgba(0,0,0,.12)); }
+.y-axis text.dim { opacity: .35; }

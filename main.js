@@ -747,3 +747,49 @@ posBars.join(
   updateChart();
 
 });
+
+
+// ---------- HOVER FOCUS + MUTE (adds-only, works across updates) ----------
+(function focusMute() {
+  const stateKey = "U.S. State"; // uses your existing columnState
+
+  function bind() {
+    const root = d3.select('#bar-chart svg');
+    if (root.empty()) return;
+
+    const bars = root.selectAll('.positive-bar, .negative-bar');
+
+    bars
+      .on('mouseenter.focusmute', function (event, d) {
+        const st = d && d[stateKey];
+        // Dim everything
+        root.selectAll('.positive-bar, .negative-bar').classed('dim', true).classed('hi', false);
+        root.selectAll('.y-axis .tick text').classed('dim', true).classed('hi', false);
+
+        // Un-dim both bars for this state
+        root.selectAll('.positive-bar, .negative-bar')
+          .filter(dd => dd && dd[stateKey] === st)
+          .classed('dim', false)
+          .classed('hi', true);
+
+        // Un-dim the matching y-axis label
+        root.selectAll('.y-axis .tick text')
+          .filter(t => t === st)
+          .classed('dim', false)
+          .classed('hi', true);
+      })
+      .on('mouseleave.focusmute', function () {
+        const root = d3.select('#bar-chart svg');
+        root.selectAll('.dim').classed('dim', false);
+        root.selectAll('.hi').classed('hi', false);
+        root.selectAll('.y-axis .tick text').classed('dim', false).classed('hi', false);
+      });
+  }
+
+  bind();
+  const host = document.getElementById('bar-chart');
+  if (host) {
+    const mo = new MutationObserver(() => bind());
+    mo.observe(host, { childList: true, subtree: true });
+  }
+})();
